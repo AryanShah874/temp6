@@ -7,7 +7,9 @@ import {
   setSelectedStock, 
   clearTransactions, 
   clearLiveTransactions, 
-  clearPriceHistory 
+  clearPriceHistory,
+  updateUserWallet,
+  addTransaction
 } from '../../store/stockSlice';
 import { 
   initializeWebSocket, 
@@ -18,6 +20,7 @@ import {
 import { formatTime } from '../../utils/dataUtils';
 import Spinner from '../../components/Spinner/Spinner';
 import './StockPage.scss';
+import { sendTransactionApi } from '../../services/transactionAPI';
 
 const StockPage: React.FC = () => {
   const { name } = useParams<{ name: string }>();
@@ -208,16 +211,35 @@ const StockPage: React.FC = () => {
   };
   
   // Handle buy/sell actions
-  const handleTransaction = (action: 'buy' | 'sell') => {
-    if (!selectedStock) return;
+  const handleTransaction = async (action: 'buy' | 'sell') => {
+    if (!selectedStock || !userInfo) return;
     
-    sendTransaction({
-      stock_name: selectedStock.stock_name || '',
-      stock_symbol: selectedStock.stock_symbol || '',
-      transaction_price: currentPrice || selectedStock.base_price || 0,
-      quantity,
-      action
-    });
+    try {
+      const transactionData = {
+        stock_name: selectedStock.stock_name || '',
+        stock_symbol: selectedStock.stock_symbol || '',
+        transaction_price: currentPrice || selectedStock.base_price || 0,
+        quantity,
+        action
+      };
+      
+      const result = await sendTransactionApi(transactionData, userInfo.userId);
+      
+      // Handle successful transaction
+      if (result.transaction.status === 'Passed') {
+        // Update user wallet in Redux
+        dispatch(updateUserWallet(result.wallet));
+        
+        // Add transaction to history
+        dispatch(addTransaction(result.transaction));
+      } else {
+        // Handle failed transaction (e.g., show error message)
+        alert(`Transaction failed: ${result.failureReason}`);
+      }
+    } catch (error) {
+      console.error('Error processing transaction:', error);
+      alert('Failed to process transaction. Please try again.');
+    }
   };
   
   // Calculate normalized height for graph bars
@@ -270,6 +292,41 @@ const StockPage: React.FC = () => {
         ></div>
       );
     });
+  };
+
+  // Render live notifications
+  const renderNotifications = () => {
+    if (liveTransactions.length === 0) {
+      return <div className="stock-page__empty">No activity yet</div>;
+    }
+    
+    // Filter out current user's transactions
+    const otherUsersTransactions = liveTransactions.filter(
+      transaction => transaction.user !== userInfo?.userName
+    );
+    
+    if (otherUsersTransactions.length === 0) {
+      return <div className="stock-page__empty">No activity from other users yet</div>;
+    }
+    
+    return otherUsersTransactions.map((transaction, index) => (
+      <div key={`notification-${index}`} className="stock-page__notification">
+        <div>
+          <span className="stock-page__notification-user">{transaction.user}</span>
+          {' '}
+          <span className={`stock-page__notification-action stock-page__notification-action--${transaction.action}`}>
+            {transaction.action === 'buy' ? 'bought' : 'sold'}
+          </span>
+          {' '}
+          <span className="stock-page__notification-quantity">
+            {transaction.quantity} {selectedStock?.stock_name}
+          </span>
+        </div>
+        <div className="stock-page__notification-time">
+          {formatTime(transaction.timestamp)}
+        </div>
+      </div>
+    ));
   };
   
   if (loading || isInitializing) {
@@ -415,20 +472,7 @@ const StockPage: React.FC = () => {
               <h3>Live Activity</h3>
             </div>
             <div className="stock-page__notification-list">
-              {liveTransactions.length > 0 ? (
-                liveTransactions.map((transaction, index) => (
-                  <div key={`live-${index}`} className="stock-page__live-item">
-                    <div className="stock-page__live-user">
-                      {transaction.user} {transaction.action === 'buy' ? 'bought' : 'sold'} {transaction.quantity} {selectedStock?.stock_name}
-                    </div>
-                    <div className="stock-page__live-time">
-                      {formatTime(transaction.timestamp)}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="stock-page__empty">No activity yet</div>
-              )}
+              {renderNotifications()}
             </div>
           </div>
         </div>

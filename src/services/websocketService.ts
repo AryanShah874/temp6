@@ -120,8 +120,8 @@ export const initializeWebSocket = (): Promise<void> => {
       });
 
       socket.on('LIVE_TRANSACTION', (data) => {
-        // Add to live transactions feed
-        store.dispatch(addLiveTransaction(data.transaction));
+        const { transaction } = data;
+        store.dispatch(addLiveTransaction(transaction));
       });
 
     } catch (error) {

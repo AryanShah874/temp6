@@ -1,9 +1,16 @@
 const http = require('http');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
+const express = require('express');
+const cors=require('cors')
+const app = express();
+app.use(express.json());
+
+app.use(cors({origin: 'http://localhost:5173', credentials: true, methods: 'GET, POST, PUT, PATCH, DELETE'})); 
+
 
 // Create HTTP server
-const server = http.createServer();
+const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -296,6 +303,77 @@ function stopPriceFluctuation(stockName) {
     console.log(`Stopped price fluctuation for ${stockName}`);
   }
 }
+
+// Add transaction API endpoint
+app.post('/api/transaction', (req, res) => {
+  const { userId, stock_name, stock_symbol, transaction_price, quantity, action } = req.body;
+  const userName = userNames[userId];
+  const wallet = userWallets[userId];
+  
+  let status = 'Failed';
+  let failureReason = '';
+  
+  // Process transaction based on action (buy/sell)
+  if (action === 'buy') {
+    const totalCost = transaction_price * quantity;
+    
+    // Check if user has enough balance
+    if (wallet.balance >= totalCost) {
+      // Update wallet balance
+      wallet.balance -= totalCost;
+      
+      // Update holdings
+      if (!wallet.holdings[stock_name]) {
+        wallet.holdings[stock_name] = 0;
+      }
+      wallet.holdings[stock_name] += quantity;
+      
+      status = 'Passed';
+    } else {
+      failureReason = 'Insufficient balance';
+    }
+  } else if (action === 'sell') {
+    // Check if user has enough holdings
+    if (wallet.holdings[stock_name] && wallet.holdings[stock_name] >= quantity) {
+      // Update holdings
+      wallet.holdings[stock_name] -= quantity;
+      
+      // Update wallet balance
+      const totalValue = transaction_price * quantity;
+      wallet.balance += totalValue;
+      
+      status = 'Passed';
+    } else {
+      failureReason = 'Insufficient holdings';
+    }
+  }
+  
+  // Create transaction record
+  const transactionRecord = {
+    stock_name,
+    stock_symbol,
+    transaction_price,
+    quantity,
+    action,
+    timestamp: new Date().toISOString(),
+    status,
+    user: userName
+  };
+  
+  // Send transaction result
+  res.json({
+    transaction: transactionRecord,
+    wallet: wallet,
+    failureReason
+  });
+  
+  // If transaction was successful, broadcast to all users in the room
+  if (status === 'Passed') {
+    io.to(stock_name).emit('LIVE_TRANSACTION', {
+      transaction: transactionRecord
+    });
+  }
+});
 
 // Start the server
 const PORT = process.env.PORT || 8080;
