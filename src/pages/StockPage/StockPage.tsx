@@ -225,15 +225,16 @@ const StockPage: React.FC = () => {
       
       const result = await sendTransactionApi(transactionData, userInfo.userId);
       
-      // Handle successful transaction
+      // Always add transaction to history regardless of status
+      dispatch(addTransaction(result.transaction));
+      
       if (result.transaction.status === 'Passed') {
-        // Update user wallet in Redux
+        // Only update wallet if transaction was successful
         dispatch(updateUserWallet(result.wallet));
         
-        // Add transaction to history
-        dispatch(addTransaction(result.transaction));
+        // Don't need to show alert for successful transactions
       } else {
-        // Handle failed transaction (e.g., show error message)
+        // Show error message for failed transactions
         alert(`Transaction failed: ${result.failureReason}`);
       }
     } catch (error) {

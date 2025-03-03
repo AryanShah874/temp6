@@ -44,6 +44,14 @@ export const initializeWebSocket = (): Promise<void> => {
     // So we'll use mock data if we can't connect after a few attempts
     if (connectionAttempts >= MAX_ATTEMPTS) {
       console.log('Using mock data for Socket.IO');
+      
+      // Get username from localStorage or use default
+      const userName = localStorage.getItem('userName') || 'MockUser';
+      mockUserData = {
+        ...mockUserData,
+        userName
+      };
+      
       store.dispatch(setUserInfo(mockUserData));
       store.dispatch(setWebSocketConnected(true));
       resolve();
@@ -53,13 +61,17 @@ export const initializeWebSocket = (): Promise<void> => {
     connectionAttempts++;
 
     try {
+      // Get user name from localStorage
+      const userName = localStorage.getItem('userName');
+      
       // Create new Socket.IO connection
       const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
       const wsUrl = `${protocol}//${window.location.hostname}:8080`;
       
       socket = io(wsUrl, {
         reconnectionAttempts: 3,
-        timeout: 10000
+        timeout: 10000,
+        query: { userName } // Pass userName as a query parameter
       });
 
       socket.on('connect', () => {
@@ -120,16 +132,15 @@ export const initializeWebSocket = (): Promise<void> => {
       });
 
       socket.on('LIVE_TRANSACTION', (data) => {
-        const { transaction } = data;
-        store.dispatch(addLiveTransaction(transaction));
+        // Add to live transactions feed
+        store.dispatch(addLiveTransaction(data.transaction));
       });
 
     } catch (error) {
       console.error('Error creating Socket.IO:', error);
-      if (connectionAttempts >= MAX_ATTEMPTS) {
-        useMockData();
-      }
-      resolve();
+      setTimeout(() => {
+        initializeWebSocket().then(resolve);
+      }, 2000);
     }
   });
 };

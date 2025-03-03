@@ -45,7 +45,10 @@ const generateRandomBalance = () => {
 // Handle Socket.IO connections
 io.on('connection', (socket) => {
   const userId = uuidv4();
-  const userName = generateRandomName();
+  
+  // Get userName from query parameters or generate a random one
+  const userNameFromClient = socket.handshake.query.userName;
+  const userName = userNameFromClient || generateRandomName();
   
   // Initialize user data
   userNames[userId] = userName;
@@ -304,7 +307,8 @@ function stopPriceFluctuation(stockName) {
   }
 }
 
-// Add transaction API endpoint
+// Modify the transaction API endpoint
+
 app.post('/api/transaction', (req, res) => {
   const { userId, stock_name, stock_symbol, transaction_price, quantity, action } = req.body;
   const userName = userNames[userId];
@@ -360,14 +364,14 @@ app.post('/api/transaction', (req, res) => {
     user: userName
   };
   
-  // Send transaction result
+  // Send transaction result to the client
   res.json({
     transaction: transactionRecord,
     wallet: wallet,
     failureReason
   });
   
-  // If transaction was successful, broadcast to all users in the room
+  // Only broadcast successful transactions to other users
   if (status === 'Passed') {
     io.to(stock_name).emit('LIVE_TRANSACTION', {
       transaction: transactionRecord
