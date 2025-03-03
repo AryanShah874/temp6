@@ -1,0 +1,49 @@
+.transaction-list {
+  &__loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 2.5rem;
+    padding-bottom: 2.5rem;
+  }
+
+  &__empty {
+    text-align: center;
+    padding-top: 2.5rem;
+    padding-bottom: 2.5rem;
+  }
+
+  &__empty-message {
+    color: #6b7280;
+    font-family: 'Poppins, sans-serif';
+  }
+
+  &__group {
+    margin-bottom: 1.5rem;
+  }
+
+  &__date-header {
+    color: #4b5563;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    font-family: 'Poppins, sans-serif';
+    position: relative;
+    padding-bottom: 0.25rem;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-bottom: 1px dotted #d1d5db;
+    }
+  }
+
+  &__transactions-container {
+    background-color: white;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+}

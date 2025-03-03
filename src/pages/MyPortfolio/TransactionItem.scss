@@ -1,0 +1,64 @@
+.transaction-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &--faded {
+    opacity: 0.7;
+  }
+
+  &__cell {
+    flex: 1;
+    font-family: 'Poppins, sans-serif';
+
+    &--text-center {
+      text-align: center;
+    }
+
+    &--text-right {
+      text-align: right;
+    }
+  }
+
+  &__stock-name {
+    font-weight: 400;
+    color: #1f2937;
+  }
+
+  &__stock-symbol {
+    font-weight: 500;
+    color: #1f2937;
+  }
+
+  &__price {
+    font-weight: 500;
+    color: #1f2937;
+  }
+
+  &__timestamp {
+    color: #4b5563;
+  }
+
+  &__status-indicator {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+    margin-left: 1rem;
+
+    &--success {
+      background-color: #4CAF50;
+    }
+
+    &--failed {
+      background-color: #F44336;
+    }
+  }
+}
